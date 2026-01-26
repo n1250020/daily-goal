@@ -1,0 +1,57 @@
+<?php
+// 日本時間に設定
+date_default_timezone_set('Asia/Tokyo');
+
+// --- 1. データベース接続設定 ---
+$host = 'localhost';
+$dbname = 'your_db'; // 自分のDB名に合わせてください
+$user = 'root';
+$pass = ''; 
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    exit('データベース接続失敗: ' . $e->getMessage());
+}
+
+$message_log = ""; 
+$js_notifications = []; // JavaScriptへ渡す通知リスト
+
+// --- 3. 【通知をセット】ボタンが押された時の処理 ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_notification'])) {
+    $set_time = $_POST['scheduled_time'];
+    $set_message = $_POST['notification_message'];
+    $set_user_id = 1;
+
+    if (!empty($set_time) && !empty($set_message)) {
+        $stmt = $pdo->prepare("INSERT INTO notifications (user_id, message, scheduled_at, is_sent) VALUES (?, ?, ?, 0)");
+        $stmt->execute([$set_user_id, $set_message, $set_time]);
+        $message_log = "通知を予約しました。";
+    }
+}
+?>
+
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Windows通知システム</title>
+</head>
+<body style="font-family: sans-serif; padding: 20px;">
+
+    <div style="max-width: 600px; margin: auto;">
+        <h2>🔔 通知予約</h2>
+        <form method="post" style="background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+            <label>予定時刻:<br>
+                <input type="datetime-local" name="scheduled_time" step="1" required>
+            </label><br><br>
+            <label>メッセージ:<br>
+                <textarea name="notification_message" required style="width: 100%;"></textarea>
+            </label><br><br>
+            <button type="submit" name="set_notification">セットする</button>
+        </form>
+
+    </div>
+</body>
+</html>
