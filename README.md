@@ -1,10 +1,10 @@
 # daily-goal
-通知
+#通知データベース作成
 
-通知データベース作成
 CREATE DATABASE your_db;
 
-テーブル作成
+#テーブル作成
+
 CREATE TABLE notifications (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
