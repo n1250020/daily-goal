@@ -18,8 +18,10 @@ try {
 $message_log = ""; 
 $js_notifications = []; // JavaScriptへ渡す通知リスト
 
+$stmt = $pdo->prepare("DELETE FROM notifications WHERE is_sent = 1"); // 送信済み通知の削除
+$stmt->execute();
 
-// --- 2. 【送信実行】ボタンが押された時の処理 ---
+// --- 2. 【送信実行】ボタンが押された時の処理 --- 機能してない
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_now'])) {
     $now = date('Y-m-d H:i:s');
     
@@ -40,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_now'])) {
             // 送信済みフラグを更新
             $update = $pdo->prepare("UPDATE notifications SET is_sent = 1 WHERE id = ?");
             $update->execute([$row['id']]);
+            $stmt = $pdo->prepare("DELETE FROM notifications WHERE is_sent = 1"); // 送信済み通知の削除
         }
     } else {
         $message_log = "送信対象の通知はありません。";
