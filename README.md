@@ -1,7 +1,7 @@
 # daily-goal
-#ホーム画面
-メニューから機能を使えるようにする</br>
-機能:OpenAI API
+#index.php,10sec.phpを</br>
+laragon/www/dailygoalの中に</br>
+laragonを起動しhttp://localhost/dailygoal/index.phpにアクセス
 
 
 #通知データベース作成
