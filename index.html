@@ -38,13 +38,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_notification'])) 
     <meta charset="UTF-8">
     <title>Windows通知システム</title>
 </head>
+<style>
+    progress {
+        width: 100%;
+        height: 125px;
+        margin: 20px 0;
+        accent-color: #2ecc71; /* ゲージの色 */
+    }
+</style>
 <body style="font-family: sans-serif; padding: 20px;">
 
+<div class="container">
+    <div class="level-badge">Lv. <span id="level">1</span></div>
+    
+    <progress id="myGauge" value="0" max="100"></progress>
+    
+    <button onclick="gainExp()">目標達成！（確認用）</button>
+    <div id="message" class="message"></div>
+</div>
+
     <div style="max-width: 600px; margin: auto;">
-        <h2>🔔 通知予約</h2>
+        <h2>🔔 通知予約（カレンダーの日付をクリックして登録）</h2>
         <form method="post" style="background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
             <label>予定時刻:<br>
-                <input type="datetime-local" name="scheduled_time" step="1" required>
+                <input type="textarea" placeholder="2016-08-07 05:04:34" name="scheduled_time" step="1" required>
             </label><br><br>
             <label>メッセージ:<br>
                 <textarea name="notification_message" required style="width: 100%;"></textarea>
@@ -53,5 +70,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_notification'])) 
         </form>
 
     </div>
+<script>
+    let lv = 1;
+    const gauge = document.getElementById('myGauge');
+    const levelText = document.getElementById('level');
+    const message = document.getElementById('message');
+
+    function gainExp() {
+        // 1回のクリックで増える量
+        const amount = 20; 
+        gauge.value += amount;
+
+        // 満タン判定
+        if (gauge.value >= gauge.max) {
+            levelUp();
+        }
+    }
+
+    function levelUp() {
+        lv++;
+        levelText.innerText = lv;
+        
+        // ゲージをリセット
+        gauge.value = 0;
+        
+        // 演出：メッセージを表示
+        message.innerText = "LEVEL UP!!";
+        setTimeout(() => { message.innerText = ""; }, 1000);
+
+        // おまけ：レベルが上がるごとに最大値を増やして難易度を上げる
+        // gauge.max += 50; 
+    }
+</script>
 </body>
 </html>
