@@ -1,4 +1,8 @@
 # daily-goal
+#ホーム画面
+メニューから機能を使えるようにする</br>
+
+
 #通知データベース作成
 
 CREATE DATABASE your_db;
