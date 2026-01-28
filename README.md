@@ -1,4 +1,4 @@
-　# daily-goal
+# daily-goal
 #index.php,10sec.phpを</br>
 laragon/www/dailygoalの中に</br>
 laragonを起動しhttp://localhost/dailygoal/index.php にアクセス
