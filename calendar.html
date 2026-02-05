@@ -1,37 +1,234 @@
-
+{% load static %}
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>カレンダー</title>
-<style>
-table {
-    border-collapse: collapse;
-}
-th,td{
-border: 1px solid #000;
-width: 40px;
-height: 40px;
-text-align: center;
-}
-.sun{color:red;}
-.sat{color:blue;}
-</style>
+    <meta charset="UTF-8">
+    <title>カレンダー</title>
+    <link rel="stylesheet" href="{% static 'calendar_app/style.css' %}">
+    <style>
+        .right-nav { display: flex; gap: 10px; align-items: center; }
+        #today-btn {
+            background-color: #FB5B01; color: white; border: none;
+            font-weight: bold; padding: 5px 15px; border-radius: 4px; cursor: pointer;
+        }
+        #today-btn:hover { background-color: #e05200; }
+    </style>
 </head>
 <body>
-<h2 style="text-align:right;">2026年1月</h2>
+    {% include 'calendar_app/header.html' %}
+    {% csrf_token %}
+    
+    <div style="padding: 20px;">
+        <h2>カレンダー画面</h2>
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <button id="prev-btn" class="nav-btn">＜</button>
+                <span id="header-title" class="header-title"></span>
+                <div class="right-nav">
+                    <button id="today-btn" class="nav-btn">今月</button>
+                    <button id="next-btn" class="nav-btn">＞</button>
+                </div>
+            </div>
+            <div class="calendar-grid" id="calendar-grid">
+                <div class="cell day-name sunday">日</div>
+                <div class="cell day-name">月</div>
+                <div class="cell day-name">火</div>
+                <div class="cell day-name">水</div>
+                <div class="cell day-name">木</div>
+                <div class="cell day-name">金</div>
+                <div class="cell day-name saturday">土</div>
+            </div>
+        </div>
+    </div>
 
-<table>
-<tr>
-<th class="sun">日</th>
-<th>月</th>
-<th>火</th>
-<th>水</th>
-<th>木</th>
-<th>金</th>
-<th class="sat">土</th>
-</tr>
-<tr><td></td><td></td><td></td><td></td><td>1</td><td>2</td><td class='sat'>3</td></tr><tr><td class='sun'>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td class='sat'>10</td></tr><tr><td class='sun'>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td><td class='sat'>17</td></tr><tr><td class='sun'>18</td><td>19</td><td>20</td><td>21</td><td>22</td><td>23</td><td class='sat'>24</td></tr><tr><td class='sun'>25</td><td>26</td><td>27</td><td>28</td><td>29</td><td>30</td><td class='sat'>31</td></tr>
-</table>
+    <div id="event-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:white; padding:20px; border-radius:8px; width:300px; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 id="modal-date-title" style="margin-top:0;">日付</h3>
+            <textarea id="modal-text" style="width:100%; height:80px; margin-bottom:10px; border:1px solid #ccc; border-radius:4px; padding:5px;" placeholder="予定を入力..."></textarea>
+            <div style="margin-bottom:15px;">
+                <p style="margin:0 0 5px 0; font-size:14px;">カテゴリー:</p>
+                <label style="margin-right:10px; color:#3498db;"><input type="radio" name="category" value="blue" checked> 仕事</label>
+                <label style="margin-right:10px; color:#e74c3c;"><input type="radio" name="category" value="red"> 重要</label>
+                <label style="color:#2ecc71;"><input type="radio" name="category" value="green"> プライベート</label>
+            </div>
+            <div style="display:flex; justify-content:space-between;">
+                <button onclick="closeModal()" style="background:#ccc; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">キャンセル</button>
+                <button id="save-modal-btn" style="background:#FB5B01; color:white; border:none; padding:8px 15px; border-radius:4px; cursor:pointer;">保存する</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const today = new Date();
+    let showYear = today.getFullYear();
+    let showMonth = today.getMonth();
+    let savedEvents = {}; // { "日付": [{id:1, text:"A", category:"blue"}, {...}] } という形式
+    let currentEditingKey = null;
+
+    const categoryColors = { 'blue': '#3498db', 'red': '#e74c3c', 'green': '#2ecc71' };
+
+    init();
+    async function init() { await loadEventsFromDjango(); createCalendar(showYear, showMonth); }
+
+    async function loadEventsFromDjango() {
+        try {
+            const response = await fetch('/api/get_events/');
+            if (response.ok) { savedEvents = await response.json(); }
+        } catch (e) { console.error("読み込みエラー", e); }
+    }
+
+    function closeModal() {
+        document.getElementById('event-modal').style.display = 'none';
+        currentEditingKey = null;
+    }
+
+    function openModal(year, month, day, dateKey) {
+        currentEditingKey = dateKey;
+        document.getElementById('modal-date-title').textContent = `${month + 1}月${day}日の予定を追加`;
+        document.getElementById('modal-text').value = ""; // 常に空（追加するため）
+        document.getElementById('event-modal').style.display = 'flex';
+    }
+
+    // 保存ボタン（追加処理）
+    document.getElementById('save-modal-btn').onclick = async () => {
+        const btn = document.getElementById('save-modal-btn');
+        if (btn.disabled) return;
+        
+        const text = document.getElementById('modal-text').value;
+        const category = document.querySelector('input[name="category"]:checked').value;
+
+        if (text.trim() !== "") {
+            btn.disabled = true;
+            btn.textContent = "保存中...";
+
+            const response = await fetch('/api/save_event/', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value 
+                },
+                body: JSON.stringify({ date_key: currentEditingKey, text: text, category: category })
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (!savedEvents[currentEditingKey]) savedEvents[currentEditingKey] = [];
+                // ローカルのデータも更新
+                savedEvents[currentEditingKey].push({ id: result.id, text: text, category: category });
+                createCalendar(showYear, showMonth);
+            }
+            
+            btn.disabled = false;
+            btn.textContent = "保存する";
+            closeModal();
+        }
+    };
+
+    async function deleteEventFromDjango(eventId) {
+        await fetch('/api/delete_event/', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value 
+            },
+            body: JSON.stringify({ id: eventId })
+        });
+    }
+
+    function createCalendar(year, month) {
+        document.getElementById('header-title').textContent = `${year}年 ${month + 1}月`;
+        const calendarGrid = document.getElementById('calendar-grid');
+        while (calendarGrid.children.length > 7) { calendarGrid.removeChild(calendarGrid.lastChild); }
+
+        const firstDate = new Date(year, month, 1);
+        const lastDate = new Date(year, month + 1, 0);
+
+        for (let i = 0; i < firstDate.getDay(); i++) {
+            const emptyCell = document.createElement('div');
+            emptyCell.className = 'cell';
+            emptyCell.style.cssText = "height:100px; background-color:#f9f9f9; border:1px solid #bdc3c7;";
+            calendarGrid.appendChild(emptyCell);
+        }
+
+        for (let i = 1; i <= lastDate.getDate(); i++) {
+            const dateCell = document.createElement('div');
+            dateCell.className = 'date-cell';
+            dateCell.style.cssText = "height:100px; background-color:#ffffff; border:1px solid #bdc3c7; padding:5px; display:flex; flex-direction:column; overflow-y:auto; cursor:pointer;";
+
+            const dateNum = document.createElement('span');
+            dateNum.textContent = i;
+            dateCell.appendChild(dateNum);
+
+            const checkDay = new Date(year, month, i).getDay();
+            if (checkDay === 0) dateCell.style.backgroundColor = "#fff5f5";
+            else if (checkDay === 6) dateCell.style.backgroundColor = "#f0f8ff";
+            
+            if (year === today.getFullYear() && month === today.getMonth() && i === today.getDate()) {
+        		dateCell.style.backgroundColor = "#fff0b3"; // 今日の色（薄い黄色）
+    		}
+
+            const dateKey = `${year}-${month}-${i}`;
+            const eventsForDay = savedEvents[dateKey];
+
+            // ★ 複数の予定をループで表示
+            if (eventsForDay && Array.isArray(eventsForDay)) {
+                eventsForDay.forEach((eventData, index) => {
+                    const eventWrapper = document.createElement('div');
+                    eventWrapper.style.cssText = `position:relative; background-color:${categoryColors[eventData.category]}; color:white; margin-bottom:3px; padding:4px 20px 4px 6px; border-radius:4px; font-size:11px;`;
+                    
+                    const eventDiv = document.createElement('div');
+                    eventDiv.textContent = eventData.text;
+                    eventDiv.style.cssText = "word-break:break-all; white-space:pre-wrap;";
+                    
+                    const delBtn = document.createElement('button');
+                    delBtn.innerHTML = "×";
+                    delBtn.style.cssText = "position:absolute; top:2px; right:2px; border:none; background:transparent; color:white; cursor:pointer; font-weight:bold;";
+                    
+                    delBtn.onclick = async (e) => {
+                        e.stopPropagation();
+                        if (confirm("この予定を削除しますか？")) {
+                            const eventId = eventData.id;
+                            eventsForDay.splice(index, 1);
+                            createCalendar(year, month);
+                            await deleteEventFromDjango(eventId);
+                        }
+                    };
+                    eventWrapper.appendChild(eventDiv);
+                    eventWrapper.appendChild(delBtn);
+                    dateCell.appendChild(eventWrapper);
+                });
+            }
+
+            dateCell.onclick = () => openModal(year, month, i, dateKey);
+            calendarGrid.appendChild(dateCell);
+        }
+    }
+    // ナビゲーションボタン（prev/next/today）の処理は以前のまま追加してください
+    // 前月ボタン
+	document.getElementById('prev-btn').onclick = () => {
+	showMonth--;
+	if (showMonth < 0) {
+        showMonth = 11;
+        showYear--;
+    }
+    createCalendar(showYear, showMonth); // ←ここが showYear, showMonth になっているか
+};
+
+// 次月ボタン
+	document.getElementById('next-btn').onclick = () => {
+    showMonth++;
+    if (showMonth > 11) {
+        showMonth = 0;
+        showYear++;
+    }
+    createCalendar(showYear, showMonth); // ←ここも確認
+};
+// 今月ボタン
+	document.getElementById('today-btn').onclick = () => {
+    showYear = today.getFullYear();
+    showMonth = today.getMonth();
+    createCalendar(showYear, showMonth);
+};
+</script>
 </body>
 </html>
