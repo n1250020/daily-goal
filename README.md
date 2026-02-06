@@ -7,6 +7,8 @@
 DBの統合
 カレンダーと通知機能の紐付け、その後DBと共に一つのPCにすべての機能を統合する
 
+#django
+https://qiita.com/pythonista/items/19613663ef7bb3c57d4f
 
 #通知データベース作成
 
