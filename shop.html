@@ -1,0 +1,253 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>アバターショップ</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* 基本レイアウト */
+        body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; color: #333; overflow: hidden; }
+        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; z-index: 100; position: relative; }
+        .header-nav button { padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-weight: bold; }
+        .shop-container { display: flex; max-width: 1300px; margin: 15px auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); height: calc(100vh - 90px); }
+
+        /* 左側：プレビュー */
+        .preview-pane { flex: 1.2; background: #f8fafc; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        
+        /* 選択中の名前タグ（アイコン付き） */
+        .selection-name-tag {
+            position: absolute; top: 20px; background: rgba(59, 130, 246, 0.9); color: white;
+            padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 12px;
+        }
+        /* 購入済みのスタイル */
+        .selection-name-tag.is-owned-tag {
+            background: rgba(16, 185, 129, 0.95) !important;
+            transform: scale(1.05);
+        }
+        .price-label { font-size: 0.9rem; opacity: 0.9; background: rgba(0,0,0,0.25); padding: 2px 12px; border-radius: 15px; }
+        .status-icon { font-size: 1.1rem; }
+
+        .avatar-viewport { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; position: relative; }
+        .preview-img { max-width: 85%; max-height: 85%; object-fit: contain; z-index: 1; transition: 0.3s; }
+        
+        .is-trialing-unowned { 
+            filter: grayscale(1) brightness(0.5) contrast(1.2) !important; 
+        }
+
+        #trial-frame-large {
+            position: absolute; z-index: 2; width: 135%; height: auto;
+            top: 78%; left: 65%; transform: translate(-50%, -50%);
+            pointer-events: none; display: none;
+        }
+
+        /* 右側：ショップパネル */
+        .control-pane { width: 500px; border-left: 1px solid #eee; display: flex; flex-direction: column; background: #fff; }
+        .shop-header { padding: 20px; border-bottom: 2px solid #f0f4f8; display: flex; justify-content: space-between; align-items: center; }
+        .wallet-info { background: #fff9db; padding: 8px 15px; border-radius: 20px; border: 1px solid #fab005; color: #f08c00; font-weight: bold; }
+
+        .item-list-container { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; }
+        .category-title { font-size: 13px; color: #64748b; margin: 20px 0 10px; font-weight: bold; text-transform: uppercase; border-left: 4px solid #3b82f6; padding-left: 10px; }
+        .grid-layout { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+        /* カードデザイン */
+        .shop-card { 
+            border: 2px solid #eee; border-radius: 12px; background: #fff; padding: 10px;
+            cursor: pointer; transition: 0.2s; position: relative; text-align: center;
+            display: flex; flex-direction: column; justify-content: space-between; height: 160px;
+        }
+        .unowned-card { background: #e2e8f0; }
+        .unowned-card .item-thumb { filter: grayscale(1) brightness(0.6); opacity: 0.7; }
+        .unowned-card .item-name { color: #64748b; }
+        .owned-card { background: #fff; border-color: #e2e8f0; }
+        .shop-card.trying { border-color: #3b82f6; background: #eff6ff; box-shadow: 0 0 0 1px #3b82f6 inset; }
+        
+        .item-thumb { width: 100%; height: 70px; object-fit: contain; margin-bottom: 5px; }
+        .item-name { font-size: 11px; font-weight: bold; height: 32px; overflow: hidden; }
+        
+        .buy-btn { width: 100%; padding: 6px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .owned-badge { width: 100%; padding: 6px; background: #10b981; color: white; border-radius: 6px; font-size: 10px; font-weight: bold; }
+
+        /* モーダル */
+        .modal-overlay {
+            position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .modal-content { background: #fff; padding: 30px; border-radius: 20px; text-align: center; width: 320px; animation: popUp 0.3s ease; }
+        @keyframes popUp { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+        .modal-btns button { flex: 1; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .btn-cancel { background: #e2e8f0; color: #475569; }
+        .btn-confirm { background: #3b82f6; color: white; }
+
+        .footer-nav { padding: 15px; border-top: 1px solid #eee; }
+        .back-btn { width: 100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div id="buyModal" class="modal-overlay">
+        <div class="modal-content">
+            <i class="fas fa-shopping-cart" style="font-size: 3rem; color: #3b82f6; margin-bottom: 15px;"></i>
+            <h3 id="modalItemName" style="margin: 0 0 10px 0;"></h3>
+            <p style="color: #64748b;">このアイテムを <span id="modalItemPrice" style="font-weight: bold; color: #f08c00;"></span> P で購入しますか？</p>
+            <div class="modal-btns">
+                <button class="btn-cancel" onclick="closeModal()">キャンセル</button>
+                <button class="btn-confirm" id="finalBuyBtn">購入する</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header-nav">
+        <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
+        <button onclick="location.href='{% url 'avatar_edit' %}'">アバター</button>
+        <button style="background: #3b82f6; color: white;">ショップ</button>
+    </div>
+
+    <div class="shop-container">
+        <div class="preview-pane">
+            <div class="selection-name-tag" id="tag-container">
+                <i id="status-icon" class="fas fa-shopping-cart status-icon"></i>
+                <span id="current-item-name">アイテムを選択中</span>
+                <span id="current-item-price" class="price-label"></span>
+            </div>
+            
+            <div id="avatar-viewport" class="avatar-viewport">
+                <img id="trial-img" src="{% static 'images/avatar/back_1.png' %}" class="preview-img">
+                <img id="trial-frame-large" src="" class="preview-frame">
+            </div>
+        </div>
+
+        <div class="control-pane">
+            <div class="shop-header">
+                <h2 style="margin:0; font-size: 1.2rem;"><i class="fas fa-shopping-bag"></i> ショップ</h2>
+                <div class="wallet-info"><i class="fas fa-coins"></i> {{ avatar.points }} P</div>
+            </div>
+            
+            <div class="item-list-container">
+                <p class="category-title">未購入のアイテム</p>
+                <div class="grid-layout">
+                    {% for item in unowned_items %}
+                    <div class="shop-card unowned-card" 
+                         {% if forloop.first %}id="first-item"{% endif %} 
+                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', false, '{{ item.price }}')">
+                        <img src="{% static 'images/avatar/' %}{{ item.category }}_{{ item.image_id }}.png" class="item-thumb">
+                        <div class="item-name">{{ item.name }}</div>
+                        <button class="buy-btn" onclick="openBuyModal('{{ item.id }}', '{{ item.name }}', '{{ item.price }}')">
+                            {{ item.price }} P
+                        </button>
+                    </div>
+                    {% empty %}
+                    <p style="text-align:center; color:#94a3b8; grid-column:span 3; padding: 20px 0; font-size: 0.8rem;">すべて所持しています！</p>
+                    {% endfor %}
+                </div>
+
+                <p class="category-title" style="border-left-color: #10b981; color: #64748b; margin-top: 30px;">購入済みのアイテム</p>
+                <div class="grid-layout">
+                    {% for item in owned_items %}
+                    <div class="shop-card owned-card" 
+                         {% if not unowned_items and forloop.first %}id="first-owned-item"{% endif %}
+                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', true, '0')">
+                        <img src="{% static 'images/avatar/' %}{{ item.category }}_{{ item.image_id }}.png" class="item-thumb">
+                        <div class="item-name">{{ item.name }}</div>
+                        <div class="owned-badge"><i class="fas fa-check"></i> 所持済み</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="footer-nav">
+                <button class="back-btn" onclick="location.href='{% url 'avatar_edit' %}'">着替えに戻る</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_BACK_IMAGE = "{% static 'images/avatar/back_1.png' %}";
+        let pendingItemId = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const firstUnowned = document.getElementById('first-item');
+            const firstOwned = document.getElementById('first-owned-item');
+            if (firstUnowned) firstUnowned.click();
+            else if (firstOwned) firstOwned.click();
+        });
+
+        function tryOn(category, id, element, itemName, isOwned, price) {
+            document.querySelectorAll('.shop-card').forEach(c => c.classList.remove('trying'));
+            element.classList.add('trying');
+            
+            const tagContainer = document.getElementById('tag-container');
+            const nameSpan = document.getElementById('current-item-name');
+            const priceSpan = document.getElementById('current-item-price');
+            const statusIcon = document.getElementById('status-icon');
+            
+            nameSpan.innerText = itemName;
+            
+            if (isOwned) {
+                // 購入済み：緑＋チェックマーク
+                tagContainer.classList.add('is-owned-tag');
+                statusIcon.className = "fas fa-check-circle status-icon";
+                priceSpan.style.display = 'none';
+            } else {
+                // 未購入：青＋カートマーク＋価格
+                tagContainer.classList.remove('is-owned-tag');
+                statusIcon.className = "fas fa-shopping-cart status-icon";
+                priceSpan.innerText = price + " P";
+                priceSpan.style.display = 'inline-block';
+            }
+
+            const trialImg = document.getElementById('trial-img');
+            const frameLarge = document.getElementById('trial-frame-large');
+            frameLarge.style.display = 'none';
+
+            if (!isOwned) {
+                trialImg.classList.add('is-trialing-unowned');
+                frameLarge.classList.add('is-trialing-unowned');
+            } else {
+                trialImg.classList.remove('is-trialing-unowned');
+                frameLarge.classList.remove('is-trialing-unowned');
+            }
+
+            if (itemName.includes("全体像") || category === 'back' || category === 'clothes') {
+                trialImg.src = BASE_BACK_IMAGE;
+            } else if (category === 'face') {
+                trialImg.src = "/static/images/avatar/face_" + id + ".png";
+            } else if (category === 'frame') {
+                trialImg.src = ""; 
+                frameLarge.src = "/static/images/avatar/frame_" + id + ".png";
+                frameLarge.style.display = 'block';
+            }
+        }
+
+        function openBuyModal(itemId, name, price) {
+            event.stopPropagation();
+            pendingItemId = itemId;
+            document.getElementById('modalItemName').innerText = name;
+            document.getElementById('modalItemPrice').innerText = price;
+            document.getElementById('buyModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('buyModal').style.display = 'none';
+        }
+
+        document.getElementById('finalBuyBtn').onclick = function() {
+            if (!pendingItemId) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'buy_item' %}";
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden'; csrf.name = 'csrfmiddlewaretoken'; csrf.value = '{{ csrf_token }}';
+            const inputId = document.createElement('input');
+            inputId.type = 'hidden'; inputId.name = 'item_id'; inputId.value = pendingItemId;
+            form.appendChild(csrf); form.appendChild(inputId);
+            document.body.appendChild(form);
+            form.submit();
+        };
+    </script>
+</body>
+</html>
