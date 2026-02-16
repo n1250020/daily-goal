@@ -1,0 +1,44 @@
+# =========================
+# ショップ画面（追加分）
+# =========================
+from .models import AvatarItem  # モデルのインポートが必要なため追記
+
+@login_required
+def shop_view(request):
+    # ログインユーザーのアバター情報を取得
+    avatar, created = Avatar.objects.get_or_create(user=request.user)
+    
+    # ユーザーが既に持っているアイテムのIDリストを取得
+    owned_item_ids = avatar.owned_items.values_list('id', flat=True)
+    
+    # まだ持っていないアイテムだけをショップに並べる
+    unowned_items = AvatarItem.objects.exclude(id__in=owned_item_ids)
+
+    # テンプレートのパスを 'users/shop.html' に修正しました
+    return render(request, 'users/shop.html', {
+        'avatar': avatar,
+        'unowned_items': unowned_items,
+    })
+
+# =========================
+# アイテム購入処理（追加分）
+# =========================
+@login_required
+def buy_item(request):
+    if request.method == "POST":
+        item_id = request.POST.get('item_id')
+        item = get_object_or_404(AvatarItem, id=item_id)
+        avatar = Avatar.objects.get(user=request.user)
+
+        # ポイントが足りるかチェック
+        if avatar.points >= item.price:
+            avatar.points -= item.price      # ポイントを引く
+            avatar.owned_items.add(item)     # 持ち物リストに追加
+            avatar.save()
+            # 購入成功：ショップ画面へリダイレクト
+            return redirect('avatar_shop')
+        else:
+            # ポイント不足の場合
+            return redirect('avatar_shop')
+    
+    return redirect('avatar_shop')
