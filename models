@@ -1,0 +1,42 @@
+from django.db import models
+from django.contrib.auth.models import User
+
+# --- 【新設】ショップで売るアイテムそのもののデータ ---
+class AvatarItem(models.Model):
+    CATEGORY_CHOICES = [
+        ('face', '顔・表情'),
+        ('frame', 'フレーム'),
+        ('back', '背景'),
+        ('clothes', '服'),
+    ]
+    name = models.CharField(max_length=100)  # アイテム名（「黄金のフレーム」など）
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES)
+    image_id = models.IntegerField()  # ファイル名の番号（face_5.png なら 5）
+    price = models.IntegerField(default=0)  # 価格（0なら無料）
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.name}"
+
+# --- 現在の装備を管理（既存のものを拡張） ---
+class Avatar(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    
+    # 現在装備中のアイテム番号
+    face_type = models.IntegerField(default=1)
+    eye_type = models.IntegerField(default=1)
+    mouth_type = models.IntegerField(default=1)
+    clothes_type = models.IntegerField(default=1)
+    back_type = models.IntegerField(default=1)
+    frame_type = models.IntegerField(default=0) # 0は「なし」
+
+    # 【追加】ユーザーが持っているアイテム（多対多の関係）
+    # これにより「購入済み」のアイテムを管理できる
+    owned_items = models.ManyToManyField(AvatarItem, blank=True)
+    
+    # 【追加】所持金（ポイント）
+    points = models.IntegerField(default=0) 
+
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s Avatar"
