@@ -1,0 +1,4 @@
+    # === ショップ機能の追加分 ===
+    path('shop/', views.shop_view, name='avatar_shop'),
+    path('shop/buy/', views.buy_item, name='buy_item'),
+]
