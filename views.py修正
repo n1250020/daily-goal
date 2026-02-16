@@ -1,0 +1,41 @@
+# =========================
+# ショップ画面
+# =========================
+@login_required
+def shop_view(request):
+    avatar, _ = Avatar.objects.get_or_create(user=request.user)
+    
+    # 購入済みアイテムを取得
+    owned_items = avatar.owned_items.all()
+    
+    # 未購入アイテムを取得（exclude を使用）
+    unowned_items = AvatarItem.objects.exclude(id__in=owned_items.values_list('id', flat=True))
+
+    return render(request, 'users/shop.html', {
+        'avatar': avatar,
+        'unowned_items': unowned_items,
+        'owned_items': owned_items,
+    })
+
+# =========================
+# アイテム購入処理
+# =========================
+@login_required
+def buy_item(request):
+    if request.method == "POST":
+        item_id = request.POST.get('item_id')
+        item = get_object_or_404(AvatarItem, id=item_id)
+        avatar = Avatar.objects.get(user=request.user)
+
+        # 所持金チェックと購入処理
+        if avatar.points >= item.price:
+            avatar.points -= item.price
+            avatar.owned_items.add(item)
+            avatar.save()
+            # 成功時：ショップ画面へ戻る
+            return redirect('avatar_shop')
+        else:
+            # ポイント不足時もショップへ戻る
+            return redirect('avatar_shop')
+    
+    return redirect('avatar_shop')
