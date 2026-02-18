@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>アバター編集</title>
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; color: #333; overflow: hidden; }
+        /* ヘッダーのレイアウト調整 */
+        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 15px; z-index: 100; position: relative; }
+        
+        /* ロゴエリアのスタイル（リンク付き） */
+        .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 10px; transition: opacity 0.2s; }
+        .logo-link:hover { opacity: 0.8; }
+        .logo-img { height: 32px; width: auto; }
+        .logo-text { font-weight: bold; color: #3b82f6; font-size: 18px; }
+
+        .header-nav button { padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-weight: bold; }
+        .shop-container { display: flex; max-width: 1300px; margin: 20px auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); height: calc(100vh - 100px); }
+
+        .preview-pane { flex: 1.5; background: #f8fafc; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+        .view-mode-tabs { position: absolute; top: 20px; left: 20px; z-index: 20; display: flex; gap: 10px; }
+        
+        .avatar-viewport { width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .preview-img { max-width: 90%; max-height: 90%; object-fit: contain; pointer-events: none; transition: opacity 0.2s; }
+
+        .control-pane { width: 450px; border-left: 1px solid #eee; display: flex; flex-direction: column; background: #fff; }
+        .user-header { padding: 20px; border-bottom: 2px solid #f0f4f8; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .user-icon-huge { width: 180px; height: 180px; position: relative; display: flex; justify-content: center; align-items: center; }
+
+        #face-wrapper { 
+            width: 100%; height: 100%; border-radius: 50%; background: #fff; overflow: hidden; 
+            border: 6px solid {% if avatar.frame_type and avatar.frame_type != '0' %}transparent{% else %}#3b82f6{% endif %}; 
+            position: relative; z-index: 5; transition: border-color 0.3s;
+        }
+        #mini-face { width: 100%; height: 100%; object-fit: cover; }
+        #mini-frame { position: absolute; z-index: 10; width: 148%; height: auto; top: 80%; left: 68%; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; }
+
+        /* ユーザー情報表示エリア */
+        .user-info-box { text-align: center; }
+        .username-text { font-size: 18px; color: #1e293b; }
+        .coin-display { color: #f59e0b; font-weight: bold; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+        .tab-group { display: flex; background: #f8fafc; border-bottom: 1px solid #eee; }
+        .tab-item { flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; font-weight: bold; color: #64748b; border-bottom: 4px solid transparent; font-size: 14px; }
+        .tab-item.active { color: #3b82f6; border-bottom-color: #3b82f6; background: #fff; }
+
+        .item-list-container { flex: 1; padding: 20px; overflow-y: auto; }
+        .grid-layout { display: none; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+        .grid-layout.active { display: grid; }
+        
+        .item-card { border: 2px solid #f1f5f9; border-radius: 12px; cursor: pointer; background: #fff; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; flex-direction: column; position: relative; font-size: 11px; transition: 0.2s; padding: 5px; }
+        .item-card:hover { border-color: #cbd5e1; }
+        .item-card.selected { border-color: #3b82f6; background: #eff6ff; color: #3b82f6; }
+        .item-thumb { width: 85%; height: 85%; object-fit: contain; }
+
+        .footer-save { padding: 20px; border-top: 1px solid #eee; }
+        .save-button { width: 100%; padding: 16px; background: #3b82f6; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; }
+        .mode-btn { padding: 10px 15px; border-radius: 10px; border: 1px solid #3b82f6; background: #fff; color: #3b82f6; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .mode-btn.active { background: #3b82f6; color: #fff; }
+    </style>
+</head>
+<body>
+
+    <div class="header-nav">
+        <a href="{% url 'calendar_view' %}" class="logo-link">
+            <img src="{% static 'users/logo.png' %}" alt="Daily Goal" class="logo-img">
+            <span class="logo-text">Daily Goal</span>
+        </a>
+
+        <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
+        <button style="background: #3b82f6; color: white;">アバター</button>
+        <button onclick="location.href='{% url 'avatar_shop' %}'"><i class="fas fa-shopping-cart"></i> ショップ</button>
+        <form action="{% url 'logout' %}" method="post" style="margin-left: auto; display: inline;">
+            {% csrf_token %}
+            <button type="submit" style="border: 1px solid #ddd; background: #fff; border-radius: 6px; padding: 8px 15px; font-weight: bold; cursor: pointer; color: #dc3545;">ログアウト</button>
+        </form>
+    </div>
+
+    <div class="shop-container">
+        <div class="preview-pane">
+            <div class="view-mode-tabs">
+                <button id="btn-full" class="mode-btn active" onclick="setViewMode('full')">全体像</button>
+                <button id="btn-face-up" class="mode-btn" onclick="setViewMode('face-up')">顔アップ</button>
+            </div>
+            <div id="avatar-viewport" class="avatar-viewport">
+                <img id="display-img" 
+                     src="{% if avatar.back_type and avatar.back_type != '0' %}/static/images/avatar/back_{{ avatar.back_type }}.png{% endif %}" 
+                     class="preview-img" 
+                     style="display: {% if avatar.back_type and avatar.back_type != '0' %}block{% else %}none{% endif %};">
+            </div>
+        </div>
+
+        <div class="control-pane">
+            <div class="user-header">
+                <div class="user-icon-huge">
+                    <div id="face-wrapper">
+                        {% if avatar.face_type and avatar.face_type != "0" %}
+                            <img id="mini-face" src="/static/images/avatar/face_{{ avatar.face_type }}.png">
+                        {% else %}
+                            <div id="mini-empty" style="display:flex; width:100%; height:100%; background:#e2e8f0; align-items:center; justify-content:center;">
+                                <i class="fas fa-user" style="color:#94a3b8; font-size:40px;"></i>
+                            </div>
+                            <img id="mini-face" src="" style="display:none; width: 100%; height: 100%; object-fit: cover;">
+                        {% endif %}
+                    </div>
+                    <img id="mini-frame" src="{% if avatar.frame_type %}/static/images/avatar/frame_{{ avatar.frame_type }}.png{% endif %}" 
+                         style="display:{% if avatar.frame_type and avatar.frame_type != '0' %}block{% else %}none{% endif %};">
+                </div>
+                
+                <div class="user-info-box">
+                    <div class="username-text"><strong>{{ user.username }} さん</strong></div>
+                    <div class="coin-display">
+                        <i class="fas fa-coins"></i> {{ avatar.points }} コイン
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-group">
+                <div id="tab-back" class="tab-item active" onclick="switchTab('back')">ベース</div>
+                <div id="tab-face" class="tab-item" onclick="switchTab('face')">表情</div>
+                <div id="tab-frame" class="tab-item" onclick="switchTab('frame')">フレーム</div>
+            </div>
+
+            <div class="item-list-container">
+                <div id="grid-back" class="grid-layout active">
+                    <div class="item-card {% if not avatar.back_type or avatar.back_type == '0' %}selected{% endif %}" onclick="updateItem('back', '0')">
+                        <i class="fas fa-user-slash fa-2x"></i>
+                        <p>なし</p>
+                    </div>
+                    {% for item in avatar.owned_items.all %}
+                        {% if item.category == 'back' %}
+                        <div class="item-card {% if avatar.back_type == item.image_id %}selected{% endif %}" onclick="updateItem('back', '{{ item.image_id }}')">
+                            <img src="/static/images/avatar/back_{{ item.image_id }}.png" class="item-thumb">
+                            <p style="margin: 0; font-size: 10px;">{{ item.name }}</p>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div id="grid-face" class="grid-layout">
+                    <div class="item-card {% if not avatar.face_type or avatar.face_type == '0' %}selected{% endif %}" onclick="updateItem('face', '0')">
+                        <i class="fas fa-minus fa-2x"></i>
+                        <p>なし</p>
+                    </div>
+                    {% for item in avatar.owned_items.all %}
+                        {% if item.category == 'face' %}
+                        <div class="item-card {% if avatar.face_type == item.image_id %}selected{% endif %}" onclick="updateItem('face', '{{ item.image_id }}')">
+                            <img src="/static/images/avatar/face_{{ item.image_id }}.png" class="item-thumb">
+                            <p style="margin: 0; font-size: 10px;">{{ item.name }}</p>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <div id="grid-frame" class="grid-layout">
+                    <div class="item-card {% if not avatar.frame_type or avatar.frame_type == '0' %}selected{% endif %}" onclick="updateItem('frame', '0')">
+                        <i class="fas fa-ban fa-2x"></i><p>なし</p>
+                    </div>
+                    {% for item in avatar.owned_items.all %}
+                        {% if item.category == 'frame' %}
+                        <div class="item-card {% if avatar.frame_type == item.image_id %}selected{% endif %}" onclick="updateItem('frame', '{{ item.image_id }}')">
+                            <img src="/static/images/avatar/frame_{{ item.image_id }}.png" class="item-thumb">
+                            <p style="margin: 0; font-size: 10px;">{{ item.name }}</p>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="footer-save">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="back_type" id="input-back" value="{{ avatar.back_type|default:'0' }}">
+                    <input type="hidden" name="face_type" id="input-face" value="{{ avatar.face_type|default:'0' }}">
+                    <input type="hidden" name="frame_type" id="input-frame" value="{{ avatar.frame_type|default:'0' }}">
+                    <button type="submit" class="save-button">スタイルを保存する</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isFaceUpMode = false;
+
+        function updateItem(type, id) {
+            const displayImg = document.getElementById('display-img');
+            const miniFace = document.getElementById('mini-face');
+            const miniEmpty = document.getElementById('mini-empty');
+            const miniFrame = document.getElementById('mini-frame');
+            const faceWrapper = document.getElementById('face-wrapper');
+
+            document.getElementById('input-' + type).value = id;
+
+            if (type === 'back') {
+                if (!isFaceUpMode) {
+                    if (id === '0') {
+                        displayImg.style.display = 'none';
+                        displayImg.src = "";
+                    } else {
+                        displayImg.style.display = 'block';
+                        displayImg.src = "/static/images/avatar/back_" + id + ".png";
+                    }
+                }
+            } else if (type === 'face') {
+                const path = "/static/images/avatar/face_" + id + ".png";
+                if (id === '0') {
+                    if(miniFace) miniFace.style.display = 'none';
+                    if(miniEmpty) miniEmpty.style.display = 'flex';
+                    if(isFaceUpMode) displayImg.src = ""; 
+                } else {
+                    if(miniFace) {
+                        miniFace.src = path;
+                        miniFace.style.display = 'block';
+                    }
+                    if(miniEmpty) miniEmpty.style.display = 'none';
+                    if(isFaceUpMode) displayImg.src = path;
+                }
+            } else if (type === 'frame') {
+                if (id === '0') {
+                    if(miniFrame) miniFrame.style.display = 'none';
+                    if(faceWrapper) faceWrapper.style.borderColor = "#3b82f6";
+                } else {
+                    if(miniFrame) {
+                        miniFrame.src = "/static/images/avatar/frame_" + id + ".png";
+                        miniFrame.style.display = 'block';
+                    }
+                    if(faceWrapper) faceWrapper.style.borderColor = "transparent";
+                }
+            }
+
+            const card = event.currentTarget;
+            const container = card.parentElement;
+            container.querySelectorAll('.item-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+        }
+
+        function setViewMode(mode) {
+            isFaceUpMode = (mode === 'face-up');
+            const displayImg = document.getElementById('display-img');
+            const faceId = document.getElementById('input-face').value;
+            const backId = document.getElementById('input-back').value;
+            
+            if (isFaceUpMode) {
+                displayImg.src = faceId !== '0' ? "/static/images/avatar/face_" + faceId + ".png" : "";
+                displayImg.style.display = (faceId !== '0') ? 'block' : 'none';
+                document.getElementById('btn-face-up').classList.add('active');
+                document.getElementById('btn-full').classList.remove('active');
+            } else {
+                if (backId === '0') {
+                    displayImg.style.display = 'none';
+                    displayImg.src = "";
+                } else {
+                    displayImg.style.display = 'block';
+                    displayImg.src = "/static/images/avatar/back_" + backId + ".png";
+                }
+                document.getElementById('btn-full').classList.add('active');
+                document.getElementById('btn-face-up').classList.remove('active');
+            }
+        }
+
+        function switchTab(type) {
+            document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.grid-layout').forEach(g => g.classList.remove('active'));
+            
+            document.getElementById('tab-' + type).classList.add('active');
+            document.getElementById('grid-' + type).classList.add('active');
+
+            if (type === 'face') {
+                setViewMode('face-up');
+            } else if (type === 'back') {
+                setViewMode('full');
+            }
+        }
+    </script>
+</body>
+</html>
