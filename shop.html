@@ -9,8 +9,16 @@
     <style>
         /* 基本レイアウト */
         body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; color: #333; overflow: hidden; }
-        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; z-index: 100; position: relative; }
+        
+        /* 【追加】ヘッダー・ロゴ周りのスタイル（編集画面と統一） */
+        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 15px; z-index: 100; position: relative; }
+        .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 10px; transition: opacity 0.2s; }
+        .logo-link:hover { opacity: 0.8; }
+        .logo-img { height: 32px; width: auto; }
+        .logo-text { font-weight: bold; color: #3b82f6; font-size: 18px; }
+
         .header-nav button { padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-weight: bold; }
+        
         .shop-container { display: flex; max-width: 1300px; margin: 15px auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); height: calc(100vh - 90px); }
 
         /* 左側：プレビュー */
@@ -102,9 +110,19 @@
     </div>
 
     <div class="header-nav">
+        <a href="{% url 'calendar_view' %}" class="logo-link">
+            <img src="{% static 'users/logo.png' %}" alt="Daily Goal" class="logo-img">
+            <span class="logo-text">Daily Goal</span>
+        </a>
+
         <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
         <button onclick="location.href='{% url 'avatar_edit' %}'">アバター</button>
         <button style="background: #3b82f6; color: white;">ショップ</button>
+
+        <form action="{% url 'logout' %}" method="post" style="margin-left: auto; display: inline;">
+            {% csrf_token %}
+            <button type="submit" style="border: 1px solid #ddd; background: #fff; border-radius: 6px; padding: 8px 15px; font-weight: bold; cursor: pointer; color: #dc3545;">ログアウト</button>
+        </form>
     </div>
 
     <div class="shop-container">
@@ -188,12 +206,10 @@
             nameSpan.innerText = itemName;
             
             if (isOwned) {
-                // 購入済み：緑＋チェックマーク
                 tagContainer.classList.add('is-owned-tag');
                 statusIcon.className = "fas fa-check-circle status-icon";
                 priceSpan.style.display = 'none';
             } else {
-                // 未購入：青＋カートマーク＋価格
                 tagContainer.classList.remove('is-owned-tag');
                 statusIcon.className = "fas fa-shopping-cart status-icon";
                 priceSpan.innerText = price + " P";
