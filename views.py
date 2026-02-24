@@ -355,3 +355,25 @@ class CustomPasswordResetView(PasswordResetView):
         except User.DoesNotExist:
             self.request.session['reset_username'] = None
         return super().form_valid(form)
+
+# =========================
+# ★不足していた関数を追加 (相手側urls.py用)
+# =========================
+@login_required
+def delete_and_gain_exp(request, pk):
+    """タスクを削除し、経験値を獲得する"""
+    if request.method == 'POST':
+        schedule = get_object_or_404(Schedule, pk=pk, user=request.user)
+        # 経験値計算（一例：スケジュールレベル×10）
+        gain = schedule.level * 10
+        avatar, _ = Avatar.objects.get_or_create(user=request.user)
+        avatar.points += gain
+        avatar.save()
+        
+        schedule.delete()
+        
+        # ミッション判定（全クリア判定）
+        handle_auto_missions(request.user, 'all_cleared')
+        
+        return JsonResponse({'status': 'success', 'points': avatar.points})
+    return JsonResponse({'status': 'error'}, status=400)
