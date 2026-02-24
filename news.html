@@ -1,0 +1,212 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ニュース | Daily Goal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root { 
+            --accent-color: #3b82f6; 
+            --bg-color: #f0f2f5; 
+            --help-color: #6366f1; 
+            --danger-color: #ef4444; 
+            --gold-color: #f59e0b;
+        }
+        body { font-family: 'Helvetica Neue', Arial, sans-serif; margin: 0; background-color: var(--bg-color); overflow-x: hidden; }
+
+        /* ヘッダー・ナビ */
+        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 12px; z-index: 100; position: sticky; top: 0; }
+        .header-nav button { padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-weight: bold; }
+        .btn-mission { background-color: var(--accent-color) !important; color: white !important; border-color: var(--accent-color) !important; }
+        .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 10px; }
+        .logo-img { height: 32px; width: auto; }
+        .logo-text { font-weight: bold; color: var(--accent-color); font-size: 18px; }
+        .logout-form { margin-left: auto; }
+        .btn-logout { color: var(--danger-color) !important; border: 1px solid #fee2e2 !important; }
+
+        /* アバター：ミッション画面と完全一致の完璧な位置 */
+        .user-status-top { position: absolute; top: 65px; right: 40px; display: flex; align-items: center; gap: 15px; z-index: 10; }
+        .avatar-container-small { width: 90px; height: 90px; position: relative; display: flex; justify-content: center; align-items: center; }
+        #face-wrapper-small {
+            width: 100%; height: 100%; border-radius: 50%; background: #fff; overflow: hidden;
+            border: 3px solid {% if avatar.frame_type and avatar.frame_type != '0' %}transparent{% else %}#3b82f6{% endif %};
+            position: relative; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .face-img { width: 100%; height: 100%; object-fit: cover; }
+        .default-avatar-bg { display: flex; width: 100%; height: 100%; background: #e2e8f0; align-items: center; justify-content: center; }
+        .default-avatar-icon { color: #94a3b8; font-size: 30px; }
+        .frame-img { position: absolute; z-index: 10; width: 148%; height: auto; top: 80%; left: 68%; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; }
+        .status-info { display: flex; flex-direction: column; align-items: flex-start; }
+        .username-text { font-size: 18px; font-weight: bold; color: #1e293b; }
+        .coin-display-small { color: #f59e0b; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .title-badge-small { background: var(--accent-color); color: white; font-size: 10px; padding: 1px 8px; border-radius: 4px; margin-bottom: 2px; }
+
+        /* コンテンツ */
+        .main-content { max-width: 950px; margin: 120px auto 100px; padding: 0 20px; }
+        .content-card { background: white; border-radius: 16px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .section-header { font-size: 18px; font-weight: bold; margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 10px; }
+        .news-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+        .news-item { display: flex; flex-direction: column; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px; text-decoration: none; color: inherit; transition: all 0.2s; position: relative; }
+        .news-item:hover { border-color: var(--accent-color); background: #fff; transform: translateY(-3px); }
+        
+        .new-tag { background: var(--danger-color); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; margin-right: 8px; }
+        .news-item.is-read .new-tag { display: none; }
+        .news-item.is-read { opacity: 0.8; }
+
+        .news-title { font-size: 15px; font-weight: bold; color: #1e293b; line-height: 1.4; margin-bottom: 12px; flex-grow: 1; }
+        .news-footer { display: flex; justify-content: space-between; font-size: 12px; color: #94a3b8; border-top: 1px solid #eee; padding-top: 10px; }
+
+        .bottom-nav-container { text-align: center; margin-top: 40px; }
+        .btn-return-mission { display: inline-flex; align-items: center; gap: 10px; background: #334155; color: white; padding: 15px 40px; border-radius: 12px; text-decoration: none; font-weight: bold; }
+
+        /* 中央通知パネル */
+        .center-notification {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 30px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+            z-index: 3000; text-align: center; width: 85%; max-width: 400px;
+            border: 2px solid #fcd34d; animation: popIn 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        @keyframes popIn {
+            0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        .notif-buttons { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-stay { flex: 1; padding: 12px; background: #f1f5f9; border: none; border-radius: 12px; font-weight: bold; cursor: pointer; color: #64748b; transition: 0.2s; }
+        .btn-stay:hover { background: #e2e8f0; }
+        .btn-go-back { flex: 1; padding: 12px; background: var(--accent-color); border: none; border-radius: 12px; font-weight: bold; cursor: pointer; color: white; box-shadow: 0 4px 0 #1d4ed8; transition: 0.2s; }
+        .btn-go-back:hover { transform: translateY(-2px); }
+
+        /* ヘルプ & モーダル共通 */
+        .help-trigger { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--help-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 450px; padding: 30px; border-radius: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <header class="header-nav">
+        <a href="{% url 'calendar_view' %}" class="logo-link">
+            <img src="{% static 'users/logo.png' %}" alt="Daily Goal" class="logo-img">
+            <span class="logo-text">Daily Goal</span>
+        </a>
+        <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
+        <button class="btn-mission" onclick="location.href='{% url 'mission_list' %}'">ミッション</button>
+        <button onclick="location.href='{% url 'avatar_edit' %}'">アバター</button>
+        <button onclick="location.href='{% url 'avatar_shop' %}'">ショップ</button>
+        <form action="{% url 'logout' %}" method="post" class="logout-form">{% csrf_token %}<button type="submit" class="btn-logout">ログアウト</button></form>
+    </header>
+
+    <div class="user-status-top">
+        <div class="avatar-container-small">
+            <div id="face-wrapper-small">
+                {% if avatar.face_type and avatar.face_type != "0" %}
+                    <img class="face-img" src="/static/images/avatar/face_{{ avatar.face_type }}.png">
+                {% else %}
+                    <div class="default-avatar-bg"><i class="fas fa-user default-avatar-icon"></i></div>
+                {% endif %}
+            </div>
+            {% if avatar.frame_type and avatar.frame_type != '0' %}
+                <img class="frame-img" src="/static/images/avatar/frame_{{ avatar.frame_type }}.png">
+            {% endif %}
+        </div>
+        <div class="status-info">
+            <span class="title-badge-small">{{ avatar.current_title }}</span>
+            <div class="username-text">{{ user.username }} さん</div>
+            <div class="coin-display-small"><i class="fas fa-coins"></i> {{ avatar.points }}</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <div class="content-card">
+            <h2 class="section-header"><i class="fas fa-bolt" style="color:#f1c40f;"></i> PICK UP NEWS</h2>
+            <div class="news-grid">
+                {% for item in news_items %}
+                <a href="{{ item.link }}" target="_blank" class="news-item" onclick="handleNewsClick(this, '{{ item.title|escapejs }}')">
+                    <div class="news-title">
+                        <span class="new-tag">NEW</span>
+                        {{ item.title }}
+                    </div>
+                    <div class="news-footer">
+                        <span>{{ item.source }}</span>
+                        <span style="color:var(--accent-color); font-weight:bold;">READ <i class="fas fa-chevron-right"></i></span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="bottom-nav-container">
+            <a href="{% url 'mission_list' %}" class="btn-return-mission"><i class="fas fa-arrow-left"></i> ミッション一覧に戻る</a>
+        </div>
+    </main>
+
+    <div id="centerNotif" class="center-notification">
+        <i class="fas fa-check-circle" style="font-size: 60px; color: #10b981; margin-bottom: 15px;"></i>
+        <h2 style="margin: 0; font-size: 22px; color: #1e293b;">クリアしました！✨</h2>
+        <p style="color: #475569; font-size: 14px; line-height: 1.6; margin: 15px 0;">
+            本日のミッションを達成しました！<br>
+            <strong>クリア後もミッション画面から<br>いつでもニュースを確認できます。</strong>
+        </p>
+        <div class="notif-buttons">
+            <button class="btn-stay" onclick="closeNotif()">ここに残る</button>
+            <button class="btn-go-back" onclick="location.href='{% url 'mission_list' %}'">ミッション画面へ</button>
+        </div>
+    </div>
+
+    <div class="help-trigger" onclick="toggleModal('helpModal', true)">?</div>
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content" style="text-align:left;">
+            <h2 style="color:var(--help-color); margin-top:0;"><i class="fas fa-info-circle"></i> ヒント</h2>
+            <p style="color: #475569; font-size: 14px;">ニュースをどれか1つ読むとクリアです！</p>
+            <button onclick="toggleModal('helpModal', false)" style="width:100%; padding:12px; background:#f1f5f9; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:10px;">とじる</button>
+        </div>
+    </div>
+
+    <script>
+        let missionJustCleared = false; 
+
+        function toggleModal(id, show) { document.getElementById(id).style.display = show ? 'flex' : 'none'; }
+        function closeNotif() { document.getElementById('centerNotif').style.display = 'none'; }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const readNews = JSON.parse(localStorage.getItem('readNews') || '[]');
+            document.querySelectorAll('.news-item').forEach(item => {
+                const title = item.querySelector('.news-title').textContent.replace('NEW', '').trim();
+                if (readNews.includes(title)) { item.classList.add('is-read'); }
+            });
+        });
+
+        async function handleNewsClick(element, title) {
+            let readNews = JSON.parse(localStorage.getItem('readNews') || '[]');
+            if (!readNews.includes(title)) {
+                readNews.push(title);
+                localStorage.setItem('readNews', JSON.stringify(readNews));
+            }
+            element.classList.add('is-read');
+
+            try {
+                const response = await fetch("{% url 'news_view' %}", {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+                // 今回のクリックで初めてクリアになった場合のみフラグを立てる
+                if (data.status === "success" && data.mission_cleared) {
+                    missionJustCleared = true;
+                }
+            } catch (e) { console.error("通信エラー:", e); }
+        }
+
+        // 別タブから戻ってきた瞬間の検知
+        window.addEventListener('focus', () => {
+            if (missionJustCleared) {
+                setTimeout(() => {
+                    document.getElementById('centerNotif').style.display = 'block';
+                    missionJustCleared = false; 
+                }, 400);
+            }
+        });
+    </script>
+</body>
+</html>
