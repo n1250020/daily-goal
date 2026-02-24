@@ -36,7 +36,6 @@
         .logout-form { margin-left: auto; }
         .btn-logout { color: var(--danger-color) !important; border: 1px solid #fee2e2 !important; }
 
-        /* アバター：ニュース画面と位置を完全一致 */
         .user-status-top { position: absolute; top: 65px; right: 40px; display: flex; align-items: center; gap: 15px; z-index: 10; }
         .avatar-container-small { width: 90px; height: 90px; position: relative; display: flex; justify-content: center; align-items: center; }
         #face-wrapper-small {
@@ -82,8 +81,8 @@
             padding: 6px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; transition: 0.2s; border: none;
         }
         .btn-small-challenge { background: var(--accent-color); color: white; box-shadow: 0 3px 0 #1d4ed8; }
-        /* クリア後のボタン用スタイル */
         .btn-completed-view { background: #64748b; color: white; box-shadow: 0 3px 0 #475569; }
+        .claim-btn { background: var(--gold-gradient); color: white; box-shadow: 0 3px 0 #b45309; }
 
         #toast-notice {
             position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
@@ -162,13 +161,13 @@
                             {% if progress.is_completed %}
                                 <div class="grand-complete"><i class="fas fa-crown"></i> クリア！</div>
                             {% else %}
-                                <span class="clear-hint"><i class="fas fa-lightbulb"></i> ニュースを読むだけ！</span>
+                                <span class="clear-hint"><i class="fas fa-lightbulb"></i> {{ progress.mission.description|truncatechars:20 }}</span>
                             {% endif %}
                         </div>
                     </div>
                     <div class="mission-action" style="margin-left: 15px;">
                         {% if progress.is_completed %}
-                            <button onclick="location.href='{% url 'news_view' %}'" class="btn-small-challenge btn-completed-view">ニュースを見る</button>
+                            <button onclick="location.href='{% url 'news_view' %}'" class="btn-small-challenge btn-completed-view">見に行く</button>
                         {% else %}
                             <button onclick="location.href='{% url 'news_view' %}'" class="btn-small-challenge">挑戦</button>
                         {% endif %}
@@ -198,9 +197,9 @@
                             {% endif %}
                         </div>
                     </div>
-                    {% if not progress.is_completed %}
+                    {% if not progress.is_reward_received %}
                         <div class="progress-container">
-                            <div class="progress-bar" style="width: calc(({{ progress.current_count }} / {{ progress.mission.required_count|default:1 }}) * 100%);"></div>
+                            <div class="progress-bar" style="width: {% if progress.is_completed %}100%{% else %}calc(({{ progress.current_count }} / {{ progress.mission.required_count|default:1 }}) * 100%){% endif %};"></div>
                         </div>
                         <p style="text-align: right; font-size: 11px; margin: 3px 0 0 0; color: #64748b;">{{ progress.current_count }} / {{ progress.mission.required_count }} 回</p>
                     {% endif %}
@@ -232,15 +231,19 @@
         }
 
         function claimReward(progressId) {
+            // URLを修正しました
             fetch(`/claim-reward/${progressId}/`, {
                 method: "POST",
-                headers: { "X-CSRFToken": "{{ csrf_token }}", "X-Requested-With": "XMLHttpRequest" }
+                headers: { 
+                    "X-CSRFToken": "{{ csrf_token }}", 
+                    "X-Requested-With": "XMLHttpRequest" 
+                }
             })
             .then(res => res.json())
             .then(data => {
                 if (data.status === "success") {
-                    showToast("称号を獲得しました！🎊");
-                    setTimeout(() => location.reload(), 2000);
+                    showToast(data.message);
+                    setTimeout(() => location.reload(), 1500);
                 }
             });
         }
@@ -258,7 +261,7 @@
                     .then(data => {
                         if (data.status === "success") {
                             showToast("ミッション達成✨");
-                            setTimeout(() => location.reload(), 2000);
+                            setTimeout(() => location.reload(), 1500);
                         }
                     });
                 {% endif %}
