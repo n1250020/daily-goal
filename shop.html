@@ -10,28 +10,35 @@
         /* 基本レイアウト */
         body { margin: 0; font-family: 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; color: #333; overflow: hidden; }
         
-        /* 【追加】ヘッダー・ロゴ周りのスタイル（編集画面と統一） */
-        .header-nav { background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 15px; z-index: 100; position: relative; }
+        /* ヘッダー：編集画面・ミッション画面と統一 */
+        .header-nav { 
+            background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd; 
+            display: flex; align-items: center; gap: 12px; z-index: 100; position: sticky; top: 0;
+        }
+        .header-nav button { 
+            padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; 
+            background: #fff; border-radius: 6px; font-weight: bold; 
+        }
+        .btn-active { background: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; }
         .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 10px; transition: opacity 0.2s; }
         .logo-link:hover { opacity: 0.8; }
         .logo-img { height: 32px; width: auto; }
         .logo-text { font-weight: bold; color: #3b82f6; font-size: 18px; }
-
-        .header-nav button { padding: 8px 15px; cursor: pointer; border: 1px solid #ddd; background: #fff; border-radius: 6px; font-weight: bold; }
         
+        .logout-form { margin-left: auto; }
+        .btn-logout { color: #ef4444 !important; border: 1px solid #fee2e2 !important; }
+
         .shop-container { display: flex; max-width: 1300px; margin: 15px auto; background: #fff; border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.1); height: calc(100vh - 90px); }
 
         /* 左側：プレビュー */
         .preview-pane { flex: 1.2; background: #f8fafc; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
         
-        /* 選択中の名前タグ（アイコン付き） */
         .selection-name-tag {
             position: absolute; top: 20px; background: rgba(59, 130, 246, 0.9); color: white;
             padding: 10px 25px; border-radius: 30px; font-weight: bold; font-size: 1.1rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; transition: all 0.3s ease;
             display: flex; align-items: center; gap: 12px;
         }
-        /* 購入済みのスタイル */
         .selection-name-tag.is-owned-tag {
             background: rgba(16, 185, 129, 0.95) !important;
             transform: scale(1.05);
@@ -56,6 +63,13 @@
         .control-pane { width: 500px; border-left: 1px solid #eee; display: flex; flex-direction: column; background: #fff; }
         .shop-header { padding: 20px; border-bottom: 2px solid #f0f4f8; display: flex; justify-content: space-between; align-items: center; }
         .wallet-info { background: #fff9db; padding: 8px 15px; border-radius: 20px; border: 1px solid #fab005; color: #f08c00; font-weight: bold; }
+
+        /* 補足メッセージ */
+        .shop-info-banner {
+            padding: 10px 15px; background: #f8fafc; border-bottom: 1px solid #e2e8f0;
+            display: flex; align-items: flex-start; gap: 10px; font-size: 12px; color: #64748b;
+        }
+        .info-icon { color: #3b82f6; margin-top: 2px; }
 
         .item-list-container { flex: 1; padding: 15px; overflow-y: auto; background: #fafafa; }
         .category-title { font-size: 13px; color: #64748b; margin: 20px 0 10px; font-weight: bold; text-transform: uppercase; border-left: 4px solid #3b82f6; padding-left: 10px; }
@@ -91,8 +105,12 @@
         .btn-cancel { background: #e2e8f0; color: #475569; }
         .btn-confirm { background: #3b82f6; color: white; }
 
-        .footer-nav { padding: 15px; border-top: 1px solid #eee; }
-        .back-btn { width: 100%; padding: 12px; background: #64748b; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .footer-nav { padding: 15px; border-top: 1px solid #eee; background: #fff; }
+        .main-action-btn { width: 100%; padding: 16px; background: #3b82f6; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 0 #1d4ed8; transition: 0.2s; }
+        .main-action-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #1d4ed8; }
+        .main-action-btn.is-owned { background: #10b981; box-shadow: 0 4px 0 #059669; }
+        .main-action-btn.is-owned:active { box-shadow: 0 2px 0 #059669; }
+
     </style>
 </head>
 <body>
@@ -109,21 +127,21 @@
         </div>
     </div>
 
-    <div class="header-nav">
+    <header class="header-nav">
         <a href="{% url 'calendar_view' %}" class="logo-link">
             <img src="{% static 'users/logo.png' %}" alt="Daily Goal" class="logo-img">
             <span class="logo-text">Daily Goal</span>
         </a>
-
         <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
+        <button onclick="location.href='{% url 'mission_list' %}'">ミッション</button>
         <button onclick="location.href='{% url 'avatar_edit' %}'">アバター</button>
-        <button style="background: #3b82f6; color: white;">ショップ</button>
-
-        <form action="{% url 'logout' %}" method="post" style="margin-left: auto; display: inline;">
+        <button class="btn-active" onclick="location.href='{% url 'avatar_shop' %}'">ショップ</button>
+        
+        <form action="{% url 'logout' %}" method="post" class="logout-form">
             {% csrf_token %}
-            <button type="submit" style="border: 1px solid #ddd; background: #fff; border-radius: 6px; padding: 8px 15px; font-weight: bold; cursor: pointer; color: #dc3545;">ログアウト</button>
+            <button type="submit" class="btn-logout">ログアウト</button>
         </form>
-    </div>
+    </header>
 
     <div class="shop-container">
         <div class="preview-pane">
@@ -144,6 +162,14 @@
                 <h2 style="margin:0; font-size: 1.2rem;"><i class="fas fa-shopping-bag"></i> ショップ</h2>
                 <div class="wallet-info"><i class="fas fa-coins"></i> {{ avatar.points }} P</div>
             </div>
+
+            <div class="shop-info-banner">
+                <i class="fas fa-question-circle info-icon"></i>
+                <div>
+                    <div>一度購入したアイテムは返品できません。</div>
+                    <div style="font-weight: bold; color: #3b82f6; margin-top: 2px;">ミッションをクリアしてレベルをアップさせてコインを獲得しよう！</div>
+                </div>
+            </div>
             
             <div class="item-list-container">
                 <p class="category-title">未購入のアイテム</p>
@@ -151,7 +177,7 @@
                     {% for item in unowned_items %}
                     <div class="shop-card unowned-card" 
                          {% if forloop.first %}id="first-item"{% endif %} 
-                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', false, '{{ item.price }}')">
+                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', false, '{{ item.price }}', '{{ item.id }}')">
                         <img src="{% static 'images/avatar/' %}{{ item.category }}_{{ item.image_id }}.png" class="item-thumb">
                         <div class="item-name">{{ item.name }}</div>
                         <button class="buy-btn" onclick="openBuyModal('{{ item.id }}', '{{ item.name }}', '{{ item.price }}')">
@@ -168,7 +194,7 @@
                     {% for item in owned_items %}
                     <div class="shop-card owned-card" 
                          {% if not unowned_items and forloop.first %}id="first-owned-item"{% endif %}
-                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', true, '0')">
+                         onclick="tryOn('{{ item.category }}', '{{ item.image_id }}', this, '{{ item.name }}', true, '0', '{{ item.id }}')">
                         <img src="{% static 'images/avatar/' %}{{ item.category }}_{{ item.image_id }}.png" class="item-thumb">
                         <div class="item-name">{{ item.name }}</div>
                         <div class="owned-badge"><i class="fas fa-check"></i> 所持済み</div>
@@ -178,7 +204,9 @@
             </div>
 
             <div class="footer-nav">
-                <button class="back-btn" onclick="location.href='{% url 'avatar_edit' %}'">着替えに戻る</button>
+                <button id="footer-action-btn" class="main-action-btn" onclick="handleFooterAction()">
+                    アイテムを選択してください
+                </button>
             </div>
         </div>
     </div>
@@ -186,6 +214,7 @@
     <script>
         const BASE_BACK_IMAGE = "{% static 'images/avatar/back_1.png' %}";
         let pendingItemId = null;
+        let selectedItemInfo = { id: null, name: '', price: 0, isOwned: false };
 
         window.addEventListener('DOMContentLoaded', () => {
             const firstUnowned = document.getElementById('first-item');
@@ -194,10 +223,13 @@
             else if (firstOwned) firstOwned.click();
         });
 
-        function tryOn(category, id, element, itemName, isOwned, price) {
+        function tryOn(category, id, element, itemName, isOwned, price, dbId) {
             document.querySelectorAll('.shop-card').forEach(c => c.classList.remove('trying'));
             element.classList.add('trying');
             
+            selectedItemInfo = { id: dbId, name: itemName, price: price, isOwned: isOwned };
+            updateFooterButton();
+
             const tagContainer = document.getElementById('tag-container');
             const nameSpan = document.getElementById('current-item-name');
             const priceSpan = document.getElementById('current-item-price');
@@ -239,8 +271,27 @@
             }
         }
 
+        function updateFooterButton() {
+            const btn = document.getElementById('footer-action-btn');
+            if (selectedItemInfo.isOwned) {
+                btn.innerText = "着替えに戻る";
+                btn.classList.add('is-owned');
+            } else {
+                btn.innerText = selectedItemInfo.price + " P で購入する";
+                btn.classList.remove('is-owned');
+            }
+        }
+
+        function handleFooterAction() {
+            if (selectedItemInfo.isOwned) {
+                location.href = "{% url 'avatar_edit' %}";
+            } else if (selectedItemInfo.id) {
+                openBuyModal(selectedItemInfo.id, selectedItemInfo.name, selectedItemInfo.price);
+            }
+        }
+
         function openBuyModal(itemId, name, price) {
-            event.stopPropagation();
+            if (event) event.stopPropagation();
             pendingItemId = itemId;
             document.getElementById('modalItemName').innerText = name;
             document.getElementById('modalItemPrice').innerText = price;
