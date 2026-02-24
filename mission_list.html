@@ -1,0 +1,280 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ミッションセンター | Daily Goal</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --accent-color: #3b82f6;
+            --bg-color: #f0f2f5;
+            --help-color: #6366f1;
+            --danger-color: #ef4444;
+            --gold-color: #f59e0b;
+            --gold-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            margin: 0; background-color: var(--bg-color); color: #1e293b; overflow-x: hidden;
+        }
+
+        .header-nav {
+            background: #fff; padding: 10px 20px; border-bottom: 1px solid #ddd;
+            display: flex; align-items: center; gap: 12px; z-index: 100; position: sticky; top: 0;
+        }
+        .header-nav button {
+            padding: 8px 15px; cursor: pointer; border: 1px solid #ddd;
+            background: #fff; border-radius: 6px; font-weight: bold;
+        }
+        .btn-active { background: var(--accent-color) !important; color: white !important; border-color: var(--accent-color) !important; }
+        .logo-link { text-decoration: none; display: flex; align-items: center; gap: 8px; margin-right: 10px; }
+        .logo-img { height: 32px; width: auto; }
+        .logo-text { font-weight: bold; color: var(--accent-color); font-size: 18px; }
+        .logout-form { margin-left: auto; }
+        .btn-logout { color: var(--danger-color) !important; border: 1px solid #fee2e2 !important; }
+
+        /* アバター：ニュース画面と位置を完全一致 */
+        .user-status-top { position: absolute; top: 65px; right: 40px; display: flex; align-items: center; gap: 15px; z-index: 10; }
+        .avatar-container-small { width: 90px; height: 90px; position: relative; display: flex; justify-content: center; align-items: center; }
+        #face-wrapper-small {
+            width: 100%; height: 100%; border-radius: 50%; background: #fff; overflow: hidden;
+            border: 3px solid {% if avatar.frame_type and avatar.frame_type != '0' %}transparent{% else %}#3b82f6{% endif %};
+            position: relative; z-index: 5; box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .face-img { width: 100%; height: 100%; object-fit: cover; }
+        .default-avatar-bg { display: flex; width: 100%; height: 100%; background: #e2e8f0; align-items: center; justify-content: center; }
+        .default-avatar-icon { color: #94a3b8; font-size: 30px; }
+        .frame-img { position: absolute; z-index: 10; width: 148%; height: auto; top: 80%; left: 68%; transform: translate(-50%, -50%); object-fit: contain; pointer-events: none; }
+        
+        .status-info { display: flex; flex-direction: column; align-items: flex-start; }
+        .username-text { font-size: 18px; font-weight: bold; color: #1e293b; }
+        .coin-display-small { color: #f59e0b; font-weight: bold; font-size: 16px; display: flex; align-items: center; gap: 5px; margin-top: 2px; }
+        .title-badge-small { background: var(--accent-color); color: white; font-size: 10px; padding: 1px 8px; border-radius: 4px; margin-bottom: 2px; }
+
+        .tab-container { max-width: 800px; margin: 150px auto -145px; padding: 0 20px; display: flex; gap: 8px; }
+        .tab-btn { padding: 10px 20px; background: #e2e8f0; border: none; border-radius: 12px 12px 0 0; cursor: pointer; font-weight: bold; color: #64748b; transition: 0.3s; font-size: 14px; }
+        .tab-btn.active { background: white; color: var(--accent-color); box-shadow: 0 -4px 10px rgba(0,0,0,0.05); }
+
+        .main-content { max-width: 800px; margin: 150px auto 40px; padding: 0 20px; }
+        .mission-card { background: white; border-radius: 20px; padding: 18px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .mission-header { font-size: 18px; font-weight: 800; margin: 0 0 12px 0; display: flex; align-items: center; gap: 10px; }
+        
+        .mission-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: #fff; border: 2px solid #f1f5f9; border-radius: 12px; 
+            padding: 12px 18px; margin-top: 10px; 
+        }
+        .mission-completed { border-color: #fcd34d !important; background: linear-gradient(to right, #ffffff, #fffdf5) !important; }
+        .grand-complete { color: var(--gold-color); font-weight: 900; font-size: 14px; display: flex; align-items: center; gap: 6px; }
+
+        .mission-text h4 { font-size: 15px; margin: 0; color: #0f172a; }
+        .guide-desc { font-size: 13px; color: #64748b; margin: 2px 0 4px 0; line-height: 1.4; }
+        .clear-hint { font-size: 11px; color: var(--accent-color); font-weight: bold; background: #eff6ff; padding: 1px 6px; border-radius: 4px; display: inline-block; }
+
+        .progress-container { width: 100%; background: #e2e8f0; height: 6px; border-radius: 3px; margin-top: 8px; overflow: hidden; }
+        .progress-bar { height: 100%; background: var(--gold-gradient); transition: width 0.5s ease; }
+
+        .btn-small-challenge, .claim-btn { 
+            padding: 6px 16px; border-radius: 8px; font-weight: 800; font-size: 13px; cursor: pointer; transition: 0.2s; border: none;
+        }
+        .btn-small-challenge { background: var(--accent-color); color: white; box-shadow: 0 3px 0 #1d4ed8; }
+        /* クリア後のボタン用スタイル */
+        .btn-completed-view { background: #64748b; color: white; box-shadow: 0 3px 0 #475569; }
+
+        #toast-notice {
+            position: fixed; top: -100px; left: 50%; transform: translateX(-50%);
+            background: white; padding: 15px 30px; border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex; align-items: center; gap: 12px; z-index: 3000;
+            transition: all 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            border-left: 5px solid var(--gold-color);
+        }
+        #toast-notice.show { top: 30px; }
+
+        .help-trigger { position: fixed; bottom: 30px; right: 30px; width: 60px; height: 60px; background: var(--help-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; z-index: 1000; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 2000; justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 30px; border-radius: 20px; max-width: 400px; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="toast-notice">
+        <div class="toast-icon"><i class="fas fa-crown"></i></div>
+        <div>
+            <div style="font-weight: 800; color: #1e293b; font-size: 14px;">Mission Clear!</div>
+            <div style="font-size: 12px; color: #64748b;" id="toast-message">ミッションを達成しました✨</div>
+        </div>
+    </div>
+
+    <header class="header-nav">
+        <a href="{% url 'calendar_view' %}" class="logo-link">
+            <img src="{% static 'users/logo.png' %}" alt="Daily Goal" class="logo-img">
+            <span class="logo-text">Daily Goal</span>
+        </a>
+        <button onclick="location.href='{% url 'calendar_view' %}'">カレンダー</button>
+        <button class="btn-active" onclick="location.href='{% url 'mission_list' %}'">ミッション</button>
+        <button onclick="location.href='{% url 'avatar_edit' %}'">アバター</button>
+        <button onclick="location.href='{% url 'avatar_shop' %}'">ショップ</button>
+        <form action="{% url 'logout' %}" method="post" class="logout-form">{% csrf_token %}<button type="submit" class="btn-logout">ログアウト</button></form>
+    </header>
+
+    <div class="user-status-top">
+        <div class="avatar-container-small">
+            <div id="face-wrapper-small">
+                {% if avatar.face_type and avatar.face_type != "0" %}
+                    <img class="face-img" src="/static/images/avatar/face_{{ avatar.face_type }}.png">
+                {% else %}
+                    <div class="default-avatar-bg"><i class="fas fa-user default-avatar-icon"></i></div>
+                {% endif %}
+            </div>
+            {% if avatar.frame_type and avatar.frame_type != '0' %}
+                <img class="frame-img" src="/static/images/avatar/frame_{{ avatar.frame_type }}.png">
+            {% endif %}
+        </div>
+        <div class="status-info">
+            <span class="title-badge-small">{{ avatar.current_title }}</span>
+            <div class="username-text">{{ user.username }} さん</div>
+            <div class="coin-display-small"><i class="fas fa-coins"></i> {{ avatar.points }}</div>
+        </div>
+    </div>
+
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="switchTab(event, 'all')">すべて</button>
+        <button class="tab-btn" onclick="switchTab(event, 'daily')">デイリー</button>
+        <button class="tab-btn" onclick="switchTab(event, 'honor')">成長記録</button>
+    </div>
+
+    <main class="main-content">
+        <div id="daily-section" class="mission-card">
+            <h2 class="mission-header"><i class="fas fa-calendar-check" style="color: var(--accent-color);"></i> 本日のデイリー</h2>
+            {% for progress in daily_missions %}
+                <div class="mission-item {% if progress.is_completed %}mission-completed{% endif %}">
+                    <div style="display: flex; align-items: center; gap: 12px; flex: 1;">
+                        <i class="fas {% if progress.is_completed %}fa-check-circle{% else %}fa-circle{% endif %}" 
+                           style="font-size: 20px; color: {% if progress.is_completed %}var(--gold-color){% else %}#ddd{% endif %};"></i>
+                        <div class="mission-text">
+                            <h4>{{ progress.mission.title }}</h4>
+                            <p class="guide-desc">{{ progress.mission.description }}</p>
+                            {% if progress.is_completed %}
+                                <div class="grand-complete"><i class="fas fa-crown"></i> クリア！</div>
+                            {% else %}
+                                <span class="clear-hint"><i class="fas fa-lightbulb"></i> ニュースを読むだけ！</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mission-action" style="margin-left: 15px;">
+                        {% if progress.is_completed %}
+                            <button onclick="location.href='{% url 'news_view' %}'" class="btn-small-challenge btn-completed-view">ニュースを見る</button>
+                        {% else %}
+                            <button onclick="location.href='{% url 'news_view' %}'" class="btn-small-challenge">挑戦</button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div id="honor-section" class="mission-card">
+            <h2 class="mission-header"><i class="fas fa-medal" style="color: var(--gold-color);"></i> 成長の記録</h2>
+            {% for progress in honor_missions %}
+            <div class="mission-item {% if progress.is_completed %}mission-completed{% endif %}">
+                <div style="flex: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div class="mission-text">
+                            <h4>{{ progress.mission.title }}</h4>
+                            <p class="guide-desc">{{ progress.mission.description }}</p>
+                            <p style="font-size: 11px; font-weight: bold; color: #b45309;">報酬：称号【{{ progress.mission.title_reward }}】</p>
+                        </div>
+                        <div>
+                            {% if progress.is_completed and not progress.is_reward_received %}
+                                <button onclick="claimReward({{ progress.id }})" class="claim-btn">報酬獲得</button>
+                            {% elif progress.is_reward_received %}
+                                <div class="grand-complete"><i class="fas fa-award"></i> 獲得済み</div>
+                            {% else %}
+                                <span style="font-size: 11px; color: #94a3b8; font-weight: bold;">進行中</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if not progress.is_completed %}
+                        <div class="progress-container">
+                            <div class="progress-bar" style="width: calc(({{ progress.current_count }} / {{ progress.mission.required_count|default:1 }}) * 100%);"></div>
+                        </div>
+                        <p style="text-align: right; font-size: 11px; margin: 3px 0 0 0; color: #64748b;">{{ progress.current_count }} / {{ progress.mission.required_count }} 回</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+
+    <div class="help-trigger" onclick="toggleModal('helpModal', true)">?</div>
+    <div id="helpModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="color:var(--help-color); margin-top:0;">使い方のヒント</h3>
+            <p style="text-align: left; font-size: 14px; line-height: 1.6; color: #475569;">
+                ・デイリーミッションは毎日リセットされます。<br>
+                ・成長記録は達成するほど豪華な称号が貰えます。<br>
+                ・右上のアバターから、獲得した称号を設定できます！
+            </p>
+            <button onclick="closeHelpWithAction()" style="width:100%; padding:12px; background:#f1f5f9; border:none; border-radius:10px; font-weight:bold; cursor:pointer; margin-top:10px;">とじる</button>
+        </div>
+    </div>
+
+    <script>
+        function showToast(message) {
+            const toast = document.getElementById('toast-notice');
+            document.getElementById('toast-message').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3500);
+        }
+
+        function claimReward(progressId) {
+            fetch(`/claim-reward/${progressId}/`, {
+                method: "POST",
+                headers: { "X-CSRFToken": "{{ csrf_token }}", "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "success") {
+                    showToast("称号を獲得しました！🎊");
+                    setTimeout(() => location.reload(), 2000);
+                }
+            });
+        }
+
+        function toggleModal(id, show) {
+            document.getElementById(id).style.display = show ? 'flex' : 'none';
+        }
+
+        function closeHelpWithAction() {
+            toggleModal('helpModal', false);
+            {% for p in honor_missions %}
+                {% if "準備" in p.mission.title and not p.is_completed %}
+                    fetch("{% url 'complete_help' %}", { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === "success") {
+                            showToast("ミッション達成✨");
+                            setTimeout(() => location.reload(), 2000);
+                        }
+                    });
+                {% endif %}
+            {% endfor %}
+        }
+
+        function switchTab(e, type) {
+            const daily = document.getElementById('daily-section');
+            const honor = document.getElementById('honor-section');
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            if(type === 'all') { daily.style.display = 'block'; honor.style.display = 'block'; }
+            else if(type === 'daily') { daily.style.display = 'block'; honor.style.display = 'none'; }
+            else { daily.style.display = 'none'; honor.style.display = 'block'; }
+        }
+    </script>
+</body>
+</html>
