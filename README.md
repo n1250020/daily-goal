@@ -1,6 +1,6 @@
 # daily-goal
 
-http://10.17.5.152:8000/login
+http://10.17.5.103:8000/login
 #ホーム画面
 メニューから機能を使えるようにする</br>
 機能:Gemini API
