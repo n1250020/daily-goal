@@ -1,6 +1,6 @@
 # daily-goal
 
-http://10.17.5.186:8000/login
+http://10.17.5.186:8000/login</br>
 https://synchronistical-nongenuinely-shayne.ngrok-free.dev
 #ホーム画面
 メニューから機能を使えるようにする</br>
