@@ -1,7 +1,7 @@
 # daily-goal
 
 http://10.17.5.186:8000/login</br>
-https://synchronistical-nongenuinely-shayne.ngrok-free.dev
+https://synchronistical-nongenuinely-shayne.ngrok-free.dev</br>
 #ホーム画面
 メニューから機能を使えるようにする</br>
 機能:Gemini API
